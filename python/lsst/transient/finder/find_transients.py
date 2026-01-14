@@ -26,9 +26,11 @@ __all__ = [
 ]
 
 from typing import Any
-from astropy.table import QTable
+
 import astropy.units as u
+import numpy as np
 from astropy.coordinates import SkyCoord
+from astropy.table import QTable, vstack
 
 import lsst.pipe.base as pipeBase
 from lsst.daf.butler import DataCoordinate
@@ -65,18 +67,16 @@ class FindTransientsTaskConnections(
         """This will drop intra quanta and assign
         them to the extra detector quanta
         """
-        consecutive_pair_table = adjuster.butler.get('consecutive_exposure_pairs')
+        consecutive_pair_table = adjuster.butler.get("consecutive_exposure_pairs")
         to_do = set(adjuster.iter_data_ids())
         seen = set()
         while to_do:
             data_id = to_do.pop()
-            if data_id["visit"] in consecutive_pair_table['visit_id']:
+            if data_id["visit"] in consecutive_pair_table["visit_id"]:
                 seen.add(data_id)
-            elif data_id["visit"] in consecutive_pair_table['prev_visit_id']:
+            elif data_id["visit"] in consecutive_pair_table["prev_visit_id"]:
                 row = consecutive_pair_table[consecutive_pair_table["prev_visit_id"] == data_id["visit"]]
-                main_visit_id = DataCoordinate.standardize(
-                    data_id, visit=row['visit_id'].value[0]
-                )
+                main_visit_id = DataCoordinate.standardize(data_id, visit=row["visit_id"].value[0])
 
                 assert main_visit_id in seen or main_visit_id in to_do, (
                     f"DataId {main_visit_id} not found in seen or to_do sets."
@@ -131,13 +131,13 @@ class FindTransientsTask(pipeBase.PipelineTask):
 
         first_catalog = first_catalog[~first_catalog["sky_source"]]
         second_catalog = second_catalog[~second_catalog["sky_source"]]
-        
+
         first_catalog = first_catalog[first_catalog["detect_isPrimary"]]
         second_catalog = second_catalog[second_catalog["detect_isPrimary"]]
-        
+
         # Match sky coordinates
-        first_coords = SkyCoord(first_catalog['coord_ra'], first_catalog['coord_dec'], unit='deg')
-        second_coords = SkyCoord(second_catalog['coord_ra'], second_catalog['coord_dec'], unit='deg')
+        first_coords = SkyCoord(first_catalog["coord_ra"], first_catalog["coord_dec"], unit="deg")
+        second_coords = SkyCoord(second_catalog["coord_ra"], second_catalog["coord_dec"], unit="deg")
         idx, sep2d, _ = first_coords.match_to_catalog_sky(second_coords)
         mask_match = sep2d < radius
 
@@ -157,75 +157,78 @@ class FindTransientsTask(pipeBase.PipelineTask):
             "pixelFlags_suspectCenter",
             "deblend_skipped",
         ]
-        def build_good_mask(cat):
+
+        def build_good_mask(cat: QTable) -> np.ndarray:
             m = np.ones(len(cat), dtype=bool)
             for flag in bad_flags:
                 m &= ~cat[flag]
             return m
-        
+
         good_prev = build_good_mask(first_catalog)
         good_curr = build_good_mask(second_catalog)
-        
+
         # --- Matched stars (both matched AND both good) ---
         matched1 = first_catalog[mask_match]
         matched2 = second_catalog[idx[mask_match]]
-        
+
         good_pair = good_prev[mask_match] & good_curr[idx[mask_match]]
-        
+
         matched1 = matched1[good_pair]
         matched2 = matched2[good_pair]
-        
+
         # --- Unmatched stars (unmatched AND good) ---
         unmatched_prev = first_catalog[(~mask_match) & good_prev]
-        
+
         matched_curr_idx = idx[mask_match]
         is_matched_curr = np.zeros(len(second_catalog), dtype=bool)
         is_matched_curr[matched_curr_idx] = True
-        
+
         unmatched_curr = second_catalog[(~is_matched_curr) & good_curr]
 
-        # butler.get('preliminary_visit_image.mask', instrument='LSSTCam', visit=, detector=)
         # compute scalar arrays only
-        flux_diff12 = matched2['ap12Flux'] - matched1['ap12Flux']
-        flux_diff09 = matched2['ap09Flux'] - matched1['ap09Flux']
-        flux_diff06 = matched2['ap06Flux'] - matched1['ap06Flux']
-        flux_diffpsf = matched2['psfFlux'] - matched1['psfFlux']
-        extendedness =np.maximum(
-            matched2["sizeExtendedness"],
-            matched1["sizeExtendedness"]
+        flux_diff12 = matched2["ap12Flux"] - matched1["ap12Flux"]
+        flux_diff09 = matched2["ap09Flux"] - matched1["ap09Flux"]
+        flux_diff06 = matched2["ap06Flux"] - matched1["ap06Flux"]
+        flux_diffpsf = matched2["psfFlux"] - matched1["psfFlux"]
+        extendedness = np.maximum(matched2["sizeExtendedness"], matched1["sizeExtendedness"])
+
+        matched_table = QTable(
+            {
+                "first_visit": first_visit,
+                "second_visit": second_visit,
+                "first_src_id": matched1["sourceId"],
+                "second_src_id": matched2["sourceId"],
+                "flux_diff12": flux_diff12 * flux_unit,
+                "flux_diff09": flux_diff09 * flux_unit,
+                "flux_diff06": flux_diff06 * flux_unit,
+                "flux_diffpsf": flux_diffpsf * flux_unit,
+                "extendedness": extendedness,
+            }
         )
 
-        matched_table = QTable({
-            "first_visit": first_visit,
-            "second_visit": second_visit,
-            "first_src_id": matched1["sourceId"],
-            "second_src_id": matched2["sourceId"],
-            "flux_diff12": flux_diff12 * flux_unit,
-            "flux_diff09": flux_diff09 * flux_unit,
-            "flux_diff06": flux_diff06 * flux_unit,
-            "flux_diffpsf": flux_diffpsf * flux_unit,
-            "extendedness": extendedness,
-        })
+        first_unmatched_table = QTable(
+            {
+                "visit": first_visit,
+                "sourceId": unmatched_prev["sourceId"],
+                "ra": unmatched_prev["coord_ra"] * u.deg,
+                "dec": unmatched_prev["coord_dec"] * u.deg,
+                "ap12Flux": unmatched_prev["ap12Flux"] * u.nJy,
+                "extendedness": unmatched_prev["sizeExtendedness"],
+                "which": "prev",
+            }
+        )
 
-        first_unmatched_table = QTable({
-            "visit": first_visit,
-            "sourceId": unmatched_prev["sourceId"],
-            "ra": unmatched_prev["coord_ra"] * u.deg,
-            "dec": unmatched_prev["coord_dec"] * u.deg,
-            "ap12Flux": unmatched_prev["ap12Flux"] * u.nJy,
-            "extendedness": unmatched_prev["sizeExtendedness"],
-            "which": "prev",
-        })
-
-        second_unmatched_table = QTable({
-            "visit": second_visit,
-            "sourceId": unmatched_curr["sourceId"],
-            "ra": unmatched_curr["coord_ra"] * u.deg,
-            "dec": unmatched_curr["coord_dec"] * u.deg,
-            "ap12Flux": unmatched_curr["ap12Flux"] * u.nJy,
-            "extendedness": unmatched_curr["sizeExtendedness"],
-            "which": "current",
-        })
+        second_unmatched_table = QTable(
+            {
+                "visit": second_visit,
+                "sourceId": unmatched_curr["sourceId"],
+                "ra": unmatched_curr["coord_ra"] * u.deg,
+                "dec": unmatched_curr["coord_dec"] * u.deg,
+                "ap12Flux": unmatched_curr["ap12Flux"] * u.nJy,
+                "extendedness": unmatched_curr["sizeExtendedness"],
+                "which": "current",
+            }
+        )
         unmatched_table = vstack([first_unmatched_table, second_unmatched_table])
 
         butlerQC.put(unmatched_table, outputRefs.transientUnmatchedCatalogOut)
