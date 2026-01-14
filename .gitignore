@@ -1,0 +1,42 @@
+.sconsign.dblite
+config.log
+.sconf_temp
+*.o
+*.os
+*.so
+*.cfgc
+*.pyc
+*_wrap.cc
+*Lib.py
+
+# Built by sconsUtils
+version.py
+/bin/
+python/*.dist-info/
+
+# Pytest
+tests/.tests
+pytest_session.txt
+.cache/
+.pytest_cache
+.coverage*
+
+# Cython related file
+*.c
+
+# Vscode setting
+.vscode/
+.env
+
+# Mac metadata
+.DS_Store
+.pre-commit-config.yaml
+.flake8
+.isort.cfg
+.mypy.ini
+towncrier.toml
+
+# Existing Phosim Donut Templates
+policy/cwfs/donutTemplateData/phosimTemplates/
+.ruff.toml
+towncrier.toml
