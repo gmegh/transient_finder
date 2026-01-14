@@ -5,5 +5,5 @@ description: |
 instrument: lsst.obs.lsst.LsstCam
 tasks:
   findTransients:
-    class: lsst.transient.finder.findTransients.FindTransientsTask
+    class: lsst.transient.finder.find_transients.FindTransientsTask
   

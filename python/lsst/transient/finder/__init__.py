@@ -1,6 +1,6 @@
 # This package's namespace is intentionally kept empty, as users typically
 # only need one or two Tasks from it.
-from .findTransients import *
+from .find_transients import *
 
 try:
     from .version import *

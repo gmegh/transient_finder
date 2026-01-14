@@ -1,4 +1,4 @@
-# This file is part of ts_wep.
+# This file is part of transient_finder.
 #
 # Developed for the LSST Telescope and Site Systems.
 # This product includes software developed by the LSST Project
@@ -131,15 +131,20 @@ class FindTransientsTask(pipeBase.PipelineTask):
 
         first_catalog = first_catalog[~first_catalog["sky_source"]]
         second_catalog = second_catalog[~second_catalog["sky_source"]]
+        self.log.info(f"First catalog size after sky_source cut: {len(first_catalog)}")
+        self.log.info(f"Second catalog size after sky_source cut: {len(second_catalog)}")
 
         first_catalog = first_catalog[first_catalog["detect_isPrimary"]]
         second_catalog = second_catalog[second_catalog["detect_isPrimary"]]
+        self.log.info(f"First catalog size after isPrimary cut: {len(first_catalog)}")
+        self.log.info(f"Second catalog size after isPrimary cut: {len(second_catalog)}")
 
         # Match sky coordinates
         first_coords = SkyCoord(first_catalog["coord_ra"], first_catalog["coord_dec"], unit="deg")
         second_coords = SkyCoord(second_catalog["coord_ra"], second_catalog["coord_dec"], unit="deg")
         idx, sep2d, _ = first_coords.match_to_catalog_sky(second_coords)
         mask_match = sep2d < radius
+        self.log.info(f"Number of matched sources: {np.sum(mask_match)}")
 
         # --- Unmatched stars ---
         bad_flags = [
@@ -164,8 +169,11 @@ class FindTransientsTask(pipeBase.PipelineTask):
                 m &= ~cat[flag]
             return m
 
+        self.log.info("Building good masks for both catalogs")
         good_prev = build_good_mask(first_catalog)
         good_curr = build_good_mask(second_catalog)
+        self.log.info(f"Number of good sources in first catalog: {np.sum(good_prev)}")
+        self.log.info(f"Number of good sources in second catalog: {np.sum(good_curr)}")
 
         # --- Matched stars (both matched AND both good) ---
         matched1 = first_catalog[mask_match]
@@ -175,8 +183,10 @@ class FindTransientsTask(pipeBase.PipelineTask):
 
         matched1 = matched1[good_pair]
         matched2 = matched2[good_pair]
+        self.log.info(f"Number of matched and good sources: {len(matched1)}")
 
         # --- Unmatched stars (unmatched AND good) ---
+        self.log.info("Building unmatched catalogs")
         unmatched_prev = first_catalog[(~mask_match) & good_prev]
 
         matched_curr_idx = idx[mask_match]
@@ -184,6 +194,8 @@ class FindTransientsTask(pipeBase.PipelineTask):
         is_matched_curr[matched_curr_idx] = True
 
         unmatched_curr = second_catalog[(~is_matched_curr) & good_curr]
+        self.log.info(f"Number of unmatched sources in first catalog: {len(unmatched_prev)}")
+        self.log.info(f"Number of unmatched sources in second catalog: {len(unmatched_curr)}")
 
         # compute scalar arrays only
         flux_diff12 = matched2["ap12Flux"] - matched1["ap12Flux"]
@@ -191,11 +203,12 @@ class FindTransientsTask(pipeBase.PipelineTask):
         flux_diff06 = matched2["ap06Flux"] - matched1["ap06Flux"]
         flux_diffpsf = matched2["psfFlux"] - matched1["psfFlux"]
         extendedness = np.maximum(matched2["sizeExtendedness"], matched1["sizeExtendedness"])
+        self.log.info("Computed flux differences and extendedness")
 
         matched_table = QTable(
             {
-                "first_visit": first_visit,
-                "second_visit": second_visit,
+                "first_visit": np.full(len(matched1), first_visit, dtype="int64"),
+                "second_visit": np.full(len(matched1), second_visit, dtype="int64"),
                 "first_src_id": matched1["sourceId"],
                 "second_src_id": matched2["sourceId"],
                 "flux_diff12": flux_diff12 * flux_unit,
@@ -205,31 +218,35 @@ class FindTransientsTask(pipeBase.PipelineTask):
                 "extendedness": extendedness,
             }
         )
+        self.log.info("Matched table constructed")
 
         first_unmatched_table = QTable(
             {
-                "visit": first_visit,
+                "visit": np.full(len(unmatched_prev), first_visit, dtype="int64"),
+                "other_visit": np.full(len(unmatched_prev), second_visit, dtype="int64"),
                 "sourceId": unmatched_prev["sourceId"],
                 "ra": unmatched_prev["coord_ra"] * u.deg,
                 "dec": unmatched_prev["coord_dec"] * u.deg,
                 "ap12Flux": unmatched_prev["ap12Flux"] * u.nJy,
                 "extendedness": unmatched_prev["sizeExtendedness"],
-                "which": "prev",
             }
         )
+        self.log.info("First unmatched table constructed")
 
         second_unmatched_table = QTable(
             {
-                "visit": second_visit,
+                "visit": np.full(len(unmatched_curr), second_visit, dtype="int64"),
+                "other_visit": np.full(len(unmatched_curr), first_visit, dtype="int64"),
                 "sourceId": unmatched_curr["sourceId"],
                 "ra": unmatched_curr["coord_ra"] * u.deg,
                 "dec": unmatched_curr["coord_dec"] * u.deg,
                 "ap12Flux": unmatched_curr["ap12Flux"] * u.nJy,
                 "extendedness": unmatched_curr["sizeExtendedness"],
-                "which": "current",
             }
         )
+        self.log.info("Second unmatched table constructed")
         unmatched_table = vstack([first_unmatched_table, second_unmatched_table])
+        self.log.info("Unmatched table constructed")
 
         butlerQC.put(unmatched_table, outputRefs.transientUnmatchedCatalogOut)
         butlerQC.put(matched_table, outputRefs.transientMatchedCatalogOut)
