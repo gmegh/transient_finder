@@ -1,0 +1,7 @@
+computeSite: s3df
+pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/transient_pipeline.yaml
+payload:
+  butlerConfig: "/repo/main"
+  payloadName: "transient_catalogs"
+  inCollection: "LSSTCam/defaults,u/gmegias/consecutive_exposure_pairs,u/brycek/lsstcam_subtract_pairs_1500_3000,u/gmegias/lsstcam_subtract_pairs_9000_13000,u/brycek/lsstcam_subtract_pairs_0_1500,u/gmegias/lsstcam_subtract_pairs_0_1500,u/gmegias/lsstcam_subtract_pairs_1500_3000,u/gmegias/lsstcam_subtract_pairs_3000_4500,u/brycek/lsstcam_subtract_pairs_3000_4500,u/gmegias/lsstcam_subtract_pairs_6000_9000,u/gmegias/lsstcam_subtract_pairs_4500_6000"
+extraQgraphOptions: "--data-id-table /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/closed_loop_pairs_all_with_restrictions.ecsv"
