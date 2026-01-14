@@ -78,9 +78,9 @@ class FindTransientsTaskConnections(
                 row = consecutive_pair_table[consecutive_pair_table["prev_visit_id"] == data_id["visit"]]
                 main_visit_id = DataCoordinate.standardize(data_id, visit=row["visit_id"].value[0])
 
-                assert main_visit_id in seen or main_visit_id in to_do, (
-                    f"DataId {main_visit_id} not found in seen or to_do sets."
-                )
+                if main_visit_id not in seen and main_visit_id not in to_do:
+                    adjuster.remove_quantum(data_id)
+                    continue
 
                 inputs = adjuster.get_inputs(data_id)
                 adjuster.add_input(main_visit_id, "detectionCatalogs", inputs["detectionCatalogs"][0])
