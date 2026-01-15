@@ -30,7 +30,7 @@ from typing import Any
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import SkyCoord
-from astropy.table import QTable, vstack
+from astropy.table import Table, vstack
 
 import lsst.pipe.base as pipeBase
 from lsst.daf.butler import DataCoordinate
@@ -48,17 +48,24 @@ class FindTransientsTaskConnections(
         name="single_visit_star_reprocessed",
         multiple=True,
     )
+    visitSummaries = connectionTypes.Input(
+        doc="Preliminary Visit Summary Catalogs",
+        dimensions=("visit", "instrument"),
+        storageClass="ArrowAstropy",
+        name="preliminary_visit_summary",
+        multiple=True,
+    )
     transientMatchedCatalogOut = connectionTypes.Output(
         doc="Transient Catalog with reprocessed matched stars",
         dimensions=("visit", "instrument"),
-        storageClass="AstropyQTable",
+        storageClass="ArrowAstropy",
         name="transient_matched_catalog",
         multiple=False,
     )
     transientUnmatchedCatalogOut = connectionTypes.Output(
         doc="Transient Catalog with reprocessed unmatched stars",
         dimensions=("visit", "instrument"),
-        storageClass="AstropyQTable",
+        storageClass="ArrowAstropy",
         name="transient_unmatched_catalog",
         multiple=False,
     )
@@ -84,6 +91,7 @@ class FindTransientsTaskConnections(
 
                 inputs = adjuster.get_inputs(data_id)
                 adjuster.add_input(main_visit_id, "detectionCatalogs", inputs["detectionCatalogs"][0])
+                adjuster.add_input(main_visit_id, "visitSummaries", inputs["visitSummaries"][0])
                 adjuster.remove_quantum(data_id)
 
             else:
@@ -109,6 +117,9 @@ class FindTransientsTask(pipeBase.PipelineTask):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
+    def detectors_missing_wcs(self, det_table: Table) -> set[int]:
+        return {rec["id"] for rec in det_table if rec.wcs is None}
+
     def runQuantum(
         self,
         butlerQC: pipeBase.QuantumContext,
@@ -119,14 +130,21 @@ class FindTransientsTask(pipeBase.PipelineTask):
         flux_unit = u.nJy
         radius = 1.0 * u.arcsec
         detection_catalogs = butlerQC.get(inputRefs.detectionCatalogs)
+        visit_summaries = butlerQC.get(inputRefs.visitSummaries)
 
         # We need to ensure we always have the order of visits
         visits = [ref.dataId["visit"] for ref in inputRefs.detectionCatalogs]
+        if len(visits) != 2:
+            self.log.warning(f"Missing one of the visits, number of visits found: {len(visits)}")
+            return
         if visits[0] > visits[1]:
             detection_catalogs.reverse()
+            visit_summaries.reverse()
             visits.reverse()
+
         first_visit, second_visit = visits
         first_catalog, second_catalog = detection_catalogs
+        first_summary, second_summary = visit_summaries
         self.log.info(f"Processing visits: {first_visit}, {second_visit}")
 
         first_catalog = first_catalog[~first_catalog["sky_source"]]
@@ -138,6 +156,26 @@ class FindTransientsTask(pipeBase.PipelineTask):
         second_catalog = second_catalog[second_catalog["detect_isPrimary"]]
         self.log.info(f"First catalog size after isPrimary cut: {len(first_catalog)}")
         self.log.info(f"Second catalog size after isPrimary cut: {len(second_catalog)}")
+
+        # these are chosen by hand based on how vignetted they are.
+        # TO-DO: make this configurable
+        bad_detectors = {1, 75, 117}
+        first_wcs_missing_detectors = self.detectors_missing_wcs(first_summary)
+        second_wcs_missing_detectors = self.detectors_missing_wcs(second_summary)
+        wcs_missing_detectors = first_wcs_missing_detectors | second_wcs_missing_detectors
+        skipped_detectors = bad_detectors | wcs_missing_detectors
+        first_detectors_mask = ~np.isin(first_catalog["detector"], skipped_detectors)
+        second_detectors_mask = ~np.isin(second_catalog["detector"], skipped_detectors)
+        first_catalog = first_catalog[first_detectors_mask]
+        second_catalog = second_catalog[second_detectors_mask]
+        self.log.info(
+            f"First catalog size after detector cut: {len(first_catalog)}, "
+            f"dropped {len(~first_detectors_mask)} sources"
+        )
+        self.log.info(
+            f"Second catalog size after detector cut: {len(second_catalog)}, "
+            f"dropped {len(~second_detectors_mask)} sources"
+        )
 
         # Match sky coordinates
         first_coords = SkyCoord(first_catalog["coord_ra"], first_catalog["coord_dec"], unit="deg")
@@ -163,7 +201,7 @@ class FindTransientsTask(pipeBase.PipelineTask):
             "deblend_skipped",
         ]
 
-        def build_good_mask(cat: QTable) -> np.ndarray:
+        def build_good_mask(cat: Table) -> np.ndarray:
             m = np.ones(len(cat), dtype=bool)
             for flag in bad_flags:
                 m &= ~cat[flag]
@@ -205,10 +243,13 @@ class FindTransientsTask(pipeBase.PipelineTask):
         extendedness = np.maximum(matched2["sizeExtendedness"], matched1["sizeExtendedness"])
         self.log.info("Computed flux differences and extendedness")
 
-        matched_table = QTable(
+        day_obs_first = first_visit // 10**4
+        day_obs_second = second_visit // 10**4
+        matched_table = Table(
             {
                 "first_visit": np.full(len(matched1), first_visit, dtype="int64"),
                 "second_visit": np.full(len(matched1), second_visit, dtype="int64"),
+                "day_obs": np.full(len(matched1), day_obs_first, dtype="int64"),
                 "first_src_id": matched1["sourceId"],
                 "second_src_id": matched2["sourceId"],
                 "ra": matched1["coord_ra"] * u.deg,
@@ -226,10 +267,11 @@ class FindTransientsTask(pipeBase.PipelineTask):
         )
         self.log.info("Matched table constructed")
 
-        first_unmatched_table = QTable(
+        first_unmatched_table = Table(
             {
                 "visit": np.full(len(unmatched_prev), first_visit, dtype="int64"),
                 "other_visit": np.full(len(unmatched_prev), second_visit, dtype="int64"),
+                "day_obs": np.full(len(unmatched_prev), day_obs_first, dtype="int64"),
                 "sourceId": unmatched_prev["sourceId"],
                 "ra": unmatched_prev["coord_ra"] * u.deg,
                 "dec": unmatched_prev["coord_dec"] * u.deg,
@@ -249,10 +291,11 @@ class FindTransientsTask(pipeBase.PipelineTask):
         )
         self.log.info("First unmatched table constructed")
 
-        second_unmatched_table = QTable(
+        second_unmatched_table = Table(
             {
                 "visit": np.full(len(unmatched_curr), second_visit, dtype="int64"),
                 "other_visit": np.full(len(unmatched_curr), first_visit, dtype="int64"),
+                "day_obs": np.full(len(unmatched_curr), day_obs_second, dtype="int64"),
                 "sourceId": unmatched_curr["sourceId"],
                 "ra": unmatched_curr["coord_ra"] * u.deg,
                 "dec": unmatched_curr["coord_dec"] * u.deg,
