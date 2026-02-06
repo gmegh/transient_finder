@@ -1,0 +1,6 @@
+computeSite: s3df
+pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/consolidate_transient_pipeline.yaml
+payload:
+  butlerConfig: "/repo/main"
+  payloadName: "final_transient_catalogs"
+  inCollection: "LSSTCam/defaults,lsstcam_subtract_pairs,u/gmegias/transient_catalogs"

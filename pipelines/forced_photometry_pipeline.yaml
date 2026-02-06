@@ -1,0 +1,10 @@
+description: |
+    Task that runs over all sources in single_visit_stars and forces
+    photometry at their positions in the both pair images, to recover
+    fluxes for sources that were not detected in both pair images, and to
+    add metadata to the transient catalog.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  forcePhotometryTransient:
+    class: lsst.transient.finder.force_photometry.ForcePhotometryTransientTask
+  

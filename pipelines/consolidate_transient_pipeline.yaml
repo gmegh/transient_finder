@@ -1,0 +1,8 @@
+description: |
+    Task that consolidates the transient catalogs from all detectors into a single catalog per visit,
+    and adds metadata to the consolidated catalog.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  consolidateTransientCatalog:
+    class: lsst.transient.finder.consolidate_transient_catalogs.ConsolidateTransientCatalogTask
+  

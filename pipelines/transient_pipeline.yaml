@@ -1,7 +1,7 @@
 description: |
-    A fast pipeline to be run on the rapid analysis framework at
-    the summit which feeds RubinTV for realtime observer feedback
-    specialized for LSSTCam.
+    Pipeline that runs n single_visit_stars and generates catalogs
+    of transient candidates per detector, and adds metadata to the
+    transient catalogs.
 instrument: lsst.obs.lsst.LsstCam
 tasks:
   findTransients:
