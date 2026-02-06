@@ -1,5 +1,5 @@
 computeSite: s3df
-pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/forced_photometry_pipeline.yaml
+pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/filter_transients_pipeline.yaml
 payload:
   butlerConfig: "/repo/main"
   payloadName: "transient_catalogs"

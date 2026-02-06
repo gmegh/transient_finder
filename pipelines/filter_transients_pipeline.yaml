@@ -1,0 +1,10 @@
+description: |
+    Task that runs over all sources in preliminary_transient_catalogs,
+    filters transients that are in the maskplane in either of the pair images
+    and forces photometry in both pair images at the location of all
+    the transient candidates.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  filterTransients:
+    class: lsst.transient.finder.filter_transients.FilterTransientsTask
+  
