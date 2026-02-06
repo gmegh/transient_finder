@@ -51,7 +51,7 @@ class FindTransientsTaskConnections(
     visitSummaries = connectionTypes.Input(
         doc="Preliminary Visit Summary Catalogs",
         dimensions=("visit", "instrument"),
-        storageClass="ArrowAstropy",
+        storageClass="ExposureCatalog",
         name="preliminary_visit_summary",
         multiple=True,
     )
@@ -59,14 +59,14 @@ class FindTransientsTaskConnections(
         doc="Transient Catalog with reprocessed matched stars",
         dimensions=("visit", "instrument"),
         storageClass="ArrowAstropy",
-        name="transient_matched_catalog",
+        name="preliminary_transient_matched_catalog",
         multiple=False,
     )
     transientUnmatchedCatalogOut = connectionTypes.Output(
         doc="Transient Catalog with reprocessed unmatched stars",
         dimensions=("visit", "instrument"),
         storageClass="ArrowAstropy",
-        name="transient_unmatched_catalog",
+        name="preliminary_transient_unmatched_catalog",
         multiple=False,
     )
 
@@ -81,7 +81,18 @@ class FindTransientsTaskConnections(
             data_id = to_do.pop()
             if data_id["visit"] in consecutive_pair_table["visit_id"]:
                 seen.add(data_id)
+                row = consecutive_pair_table[consecutive_pair_table["visit_id"] == data_id["visit"]]
+                main_visit_id = DataCoordinate.standardize(data_id, visit=row["prev_visit_id"].value[0])
+
+                if main_visit_id not in seen and main_visit_id not in to_do:
+                    adjuster.remove_quantum(data_id)
+                    continue
+
+                inputs = adjuster.get_inputs(data_id)
+                adjuster.add_input(main_visit_id, "detectionCatalogs", inputs["detectionCatalogs"][0])
+                adjuster.add_input(main_visit_id, "visitSummaries", inputs["visitSummaries"][0])
             elif data_id["visit"] in consecutive_pair_table["prev_visit_id"]:
+                seen.add(data_id)
                 row = consecutive_pair_table[consecutive_pair_table["prev_visit_id"] == data_id["visit"]]
                 main_visit_id = DataCoordinate.standardize(data_id, visit=row["visit_id"].value[0])
 
@@ -92,8 +103,6 @@ class FindTransientsTaskConnections(
                 inputs = adjuster.get_inputs(data_id)
                 adjuster.add_input(main_visit_id, "detectionCatalogs", inputs["detectionCatalogs"][0])
                 adjuster.add_input(main_visit_id, "visitSummaries", inputs["visitSummaries"][0])
-                adjuster.remove_quantum(data_id)
-
             else:
                 adjuster.remove_quantum(data_id)
 
@@ -163,18 +172,19 @@ class FindTransientsTask(pipeBase.PipelineTask):
         first_wcs_missing_detectors = self.detectors_missing_wcs(first_summary)
         second_wcs_missing_detectors = self.detectors_missing_wcs(second_summary)
         wcs_missing_detectors = first_wcs_missing_detectors | second_wcs_missing_detectors
-        skipped_detectors = bad_detectors | wcs_missing_detectors
+        skipped_detectors = list(bad_detectors | wcs_missing_detectors)
+        self.log.info(f"Skipping detectors: {skipped_detectors}")
         first_detectors_mask = ~np.isin(first_catalog["detector"], skipped_detectors)
         second_detectors_mask = ~np.isin(second_catalog["detector"], skipped_detectors)
         first_catalog = first_catalog[first_detectors_mask]
         second_catalog = second_catalog[second_detectors_mask]
         self.log.info(
             f"First catalog size after detector cut: {len(first_catalog)}, "
-            f"dropped {len(~first_detectors_mask)} sources"
+            f"dropped {(~first_detectors_mask).sum()} sources"
         )
         self.log.info(
             f"Second catalog size after detector cut: {len(second_catalog)}, "
-            f"dropped {len(~second_detectors_mask)} sources"
+            f"dropped {(~second_detectors_mask).sum()} sources"
         )
 
         # Match sky coordinates
