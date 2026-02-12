@@ -1,0 +1,7 @@
+computeSite: s3df
+pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/dark_cosmic_roundness_pipeline.yaml
+payload:
+  butlerConfig: "/repo/main"
+  payloadName: "dark_cosmic_roundness_single_exposure"
+  inCollection: "LSSTCam/defaults"
+  dataQuery: "instrument='LSSTCam' AND exposure=123456"

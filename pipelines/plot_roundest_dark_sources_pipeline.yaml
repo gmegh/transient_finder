@@ -1,0 +1,7 @@
+description: |
+    Export wavelet footprint products (all cutouts, circularity histograms,
+    and roundest cutouts) for each detector dark exposure.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkRingsWavelet:
+    class: lsst.transient.finder.find_dark_rings_wavelet.FindDarkRingsWaveletTask
