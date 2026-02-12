@@ -1,0 +1,22 @@
+description: |
+    Wavelet-based dark ring workflow:
+    1) per-detector wavelet footprint catalog generation
+    2) per-visit consolidation with gaussian-like roundest selection and super-plots.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkRingsWavelet:
+    class: lsst.transient.finder.find_dark_rings_wavelet.FindDarkRingsWaveletTask
+    config:
+      scales: 3
+      coefficientPlane: 2
+      negativeThreshold: -3.0
+      minFootprintArea: 10
+      minGaussianDiameterPixels: 3.0
+      maxFootprintArea: 1000
+  consolidateDarkRingVisitStats:
+    class: lsst.transient.finder.consolidate_dark_ring_visit_stats.ConsolidateDarkRingVisitStatsTask
+    config:
+      minGaussianLike: 0.7
+      minGaussianDiameterPixels: 3.0
+      referenceDiameterPixels: 9.0
+      outputRoot: "artifacts/dark_ring_wavelet_visit"

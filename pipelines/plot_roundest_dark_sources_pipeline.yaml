@@ -1,0 +1,7 @@
+description: |
+    Build per-visit wavelet dark-ring statistics and roundest gaussian-like
+    candidate cutout set from per-detector detections.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  consolidateDarkRingVisitStats:
+    class: lsst.transient.finder.consolidate_dark_ring_visit_stats.ConsolidateDarkRingVisitStatsTask
