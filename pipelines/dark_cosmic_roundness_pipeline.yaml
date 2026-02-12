@@ -1,15 +1,19 @@
 description: |
-    End-to-end dark-cosmic pipeline: detect per-detector dark sources, make
-    per-detector round+fat footprint plots, and consolidate per exposure.
+    End-to-end dark-cosmic pipeline: detect per-detector dark sources,
+    consolidate per exposure, then export only the roundest+fat cutouts
+    for easy per-exposure visual inspection.
 instrument: lsst.obs.lsst.LsstCam
 tasks:
   findDarkSources:
     class: lsst.transient.finder.find_dark_sources.FindDarkSourcesTask
     config:
       minDiameterPixels: 6.0
-  plotRoundestDarkSources:
-    class: lsst.transient.finder.plot_roundest_dark_sources.PlotRoundestDarkSourcesTask
-    config:
-      minDiameterPixels: 6.0
   consolidateDarkSourceCatalog:
     class: lsst.transient.finder.consolidate_dark_source_catalogs.ConsolidateDarkSourceCatalogTask
+  exportRoundestDarkSources:
+    class: lsst.transient.finder.export_roundest_dark_sources.ExportRoundestDarkSourcesTask
+    config:
+      minRoundness: 0.85
+      minDiameterPixels: 6.0
+      nSources: 25
+      outputDirectory: "artifacts/round_fat_dark_cutouts"
