@@ -1,0 +1,15 @@
+description: |
+    End-to-end dark-cosmic pipeline: detect per-detector dark sources, make
+    per-detector round+fat footprint plots, and consolidate per exposure.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkSources:
+    class: lsst.transient.finder.find_dark_sources.FindDarkSourcesTask
+    config:
+      minDiameterPixels: 6.0
+  plotRoundestDarkSources:
+    class: lsst.transient.finder.plot_roundest_dark_sources.PlotRoundestDarkSourcesTask
+    config:
+      minDiameterPixels: 6.0
+  consolidateDarkSourceCatalog:
+    class: lsst.transient.finder.consolidate_dark_source_catalogs.ConsolidateDarkSourceCatalogTask

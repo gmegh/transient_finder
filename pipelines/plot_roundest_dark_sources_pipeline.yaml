@@ -1,0 +1,7 @@
+description: |
+    Pipeline that plots cutouts of dark sources that are both round and fat
+    (equivalent diameter threshold) on each detector.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  plotRoundestDarkSources:
+    class: lsst.transient.finder.plot_roundest_dark_sources.PlotRoundestDarkSourcesTask
