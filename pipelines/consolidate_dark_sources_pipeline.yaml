@@ -1,0 +1,10 @@
+description: |
+    Consolidate per-detector wavelet dark-ring outputs into per-visit stats,
+    including scatter/hist and gaussian-like roundest candidates.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  consolidateDarkRingVisitStats:
+    class: lsst.transient.finder.consolidate_dark_ring_visit_stats.ConsolidateDarkRingVisitStatsTask
+    config:
+      minGaussianLike: 0.7
+      outputRoot: "artifacts/dark_ring_wavelet_visit"
