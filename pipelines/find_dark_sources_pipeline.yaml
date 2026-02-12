@@ -1,0 +1,7 @@
+description: |
+    Pipeline that detects sources in post-ISR dark exposures and computes
+    per-source roundness metrics.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkSources:
+    class: lsst.transient.finder.find_dark_sources.FindDarkSourcesTask

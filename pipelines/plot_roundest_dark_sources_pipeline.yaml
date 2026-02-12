@@ -1,0 +1,9 @@
+description: |
+    Fast per-detector pipeline that exports only round and fat dark-source
+    cutouts into a browseable folder and outputs a detector-level montage.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkSources:
+    class: lsst.transient.finder.find_dark_sources.FindDarkSourcesTask
+  exportRoundestDarkSources:
+    class: lsst.transient.finder.export_roundest_dark_sources.ExportRoundestDarkSourcesTask
