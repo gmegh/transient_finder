@@ -18,14 +18,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import math
 
 import lsst.afw.table as afwTable
-import lsst.meas.algorithms as measAlg
 import lsst.meas.base as measBase
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 import lsst.pipe.base.connectionTypes as cT
+from lsst.afw.detection import Psf
 from lsst.afw.image import Exposure
 from lsst.meas.algorithms import SourceDetectionTask, SubtractBackgroundTask
 
@@ -42,6 +41,13 @@ class FindDarkSourcesConnections(
         dimensions=("instrument", "exposure", "detector"),
     )
 
+    inputPsf = cT.Input(
+        name="input_psf_exposure",
+        doc="Input PSF exposure.",
+        storageClass="Psf",
+        dimensions=("instrument",),
+    )
+
     sourcesCatalog = cT.Output(
         name="detector_dark_source_catalog",
         doc="Output combined proposed calibration.",
@@ -51,17 +57,6 @@ class FindDarkSourcesConnections(
 
 
 class FindDarkSourcesTaskConfig(pipeBase.PipelineTaskConfig, pipelineConnections=FindDarkSourcesConnections):
-    psfFwhm: pexConfig.Field = pexConfig.Field(
-        dtype=float,
-        default=3.0,
-        doc="Repair PSF FWHM (pixels).",
-    )
-    psfSize: pexConfig.Field = pexConfig.Field(
-        dtype=int,
-        default=21,
-        doc="Repair PSF size (pixels).",
-    )
-
     sourceDetectionTask: pexConfig.ConfigurableField = pexConfig.ConfigurableField(
         target=SourceDetectionTask, doc="Task for source detection."
     )
@@ -106,7 +101,7 @@ class FindDarkSourcesTask(pipeBase.PipelineTask):
 
         self.schema = schema
 
-    def run(self, inputExp: Exposure) -> pipeBase.Struct:
+    def run(self, inputExp: Exposure, inputPsf: Psf) -> pipeBase.Struct:
         """Preprocess input exposures prior to DARK combination.
 
         This task detects and repairs cosmic rays strikes.
@@ -115,22 +110,20 @@ class FindDarkSourcesTask(pipeBase.PipelineTask):
         ----------
         inputExp : `lsst.afw.image.Exposure`
             Pre-processed dark frame data to combine.
+        inputPsf : `lsst.afw.detection.Psf`
+            Input PSF exposure.
 
         Returns
         -------
         results : `lsst.pipe.base.Struct`
             The results struct containing:
 
-            ``outputExp``
-                CR rejected, ISR processed Dark Frame
-                (`lsst.afw.image.Exposure`).
+            ``sourcesCatalog``
+                Catalog of detected dark sources
+                (`lsst.afw.table.SourceTable`).
         """
         background = self.subtractBackgroundTask.run(exposure=inputExp)
-
-        psf = measAlg.SingleGaussianPsf(
-            self.config.psfSize, self.config.psfSize, self.config.psfFwhm / (2 * math.sqrt(2 * math.log(2)))
-        )
-        inputExp.setPsf(psf)
+        inputExp.setPsf(inputPsf)
 
         id_generator = measBase.IdGenerator()
         table = afwTable.SourceTable.make(self.schema, id_generator.make_table_id_factory())
@@ -138,10 +131,10 @@ class FindDarkSourcesTask(pipeBase.PipelineTask):
         detections = self.sourceDetectionTask.run(
             table=table,
             exposure=inputExp,
-            background=background,
+            background=background.background,
         )
         sources = detections.sources
 
         return pipeBase.Struct(
-            sourcesCatalog=sources,
+            sourcesCatalog=sources.asAstropy(),
         )
