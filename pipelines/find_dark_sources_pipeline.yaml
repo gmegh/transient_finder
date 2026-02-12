@@ -1,0 +1,7 @@
+description: |
+    Pipeline that runs ISR on darks.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  FindDarkSourcesTask:
+    class: lsst.transient.finder.find_dark_sources.FindDarkSourcesTask
+  

@@ -1,0 +1,6 @@
+computeSite: s3df
+pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/find_dark_sources_pipeline.yaml
+payload:
+  butlerConfig: "/repo/main"
+  payloadName: "dark_sources"
+  inCollection: "LSSTCam/defaults,u/gmegias/darks_psf_instance,u/gmegias/post_isr_darks"

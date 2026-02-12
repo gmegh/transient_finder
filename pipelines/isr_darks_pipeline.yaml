@@ -1,0 +1,22 @@
+description: |
+    Pipeline that runs ISR on darks.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  cpDarkIsr:
+    class: lsst.ip.isr.IsrTaskLSST
+    config:
+      connections.ccdExposure: "raw"
+      connections.outputExposure: "post_isr_dark"
+      python: |
+        from lsst.cp.pipe import configureIsrTaskLSSTForCalibrations
+
+        configureIsrTaskLSSTForCalibrations(config)
+
+        config.doCrosstalk = True
+        config.crosstalk.doQuadraticCrosstalkCorrection = True
+        config.doApplyGains = True
+        config.doLinearize = True
+        config.doBias = True
+        # Defects are flagged but not interpolated for CR detection.
+        config.doDefect = True
+  
