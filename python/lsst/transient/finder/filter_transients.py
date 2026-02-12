@@ -315,6 +315,53 @@ class FilterTransientsTask(pipeBase.PipelineTask):
                 * u.nJy,
             }
         )
+        forced_unmatched_table["psfFlux_min"] = (
+            np.minimum(
+                forced_unmatched_table["forced_psfFlux_diff"].to(u.nJy).value,
+                forced_unmatched_table["psfFlux"].to(u.nJy).value,
+            )
+            * u.nJy
+        )
+
+        forced_unmatched_table["ap03Flux_min"] = (
+            np.minimum(
+                forced_unmatched_table["forced_ap03Flux_diff"].to(u.nJy).value,
+                forced_unmatched_table["ap03Flux"].to(u.nJy).value,
+            )
+            * u.nJy
+        )
+
+        forced_unmatched_table["ap06Flux_min"] = (
+            np.minimum(
+                forced_unmatched_table["forced_ap06Flux_diff"].to(u.nJy).value,
+                forced_unmatched_table["ap06Flux"].to(u.nJy).value,
+            )
+            * u.nJy
+        )
+
+        forced_unmatched_table["ap09Flux_min"] = (
+            np.minimum(
+                forced_unmatched_table["forced_ap09Flux_diff"].to(u.nJy).value,
+                forced_unmatched_table["ap09Flux"].to(u.nJy).value,
+            )
+            * u.nJy
+        )
+
+        forced_unmatched_table["ap12Flux_min"] = (
+            np.minimum(
+                forced_unmatched_table["forced_ap12Flux_diff"].to(u.nJy).value,
+                forced_unmatched_table["ap12Flux"].to(u.nJy).value,
+            )
+            * u.nJy
+        )
+
+        forced_unmatched_table["ap17Flux_min"] = (
+            np.minimum(
+                forced_unmatched_table["forced_ap17Flux_diff"].to(u.nJy).value,
+                forced_unmatched_table["ap17Flux"].to(u.nJy).value,
+            )
+            * u.nJy
+        )
         butlerQC.put(forced_unmatched_table, outputRefs.detectorTransientUnmatchedCatalogOut)
 
 
