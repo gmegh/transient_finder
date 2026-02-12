@@ -1,0 +1,11 @@
+description: |
+    Pipeline that exports per-exposure cutouts for only round and fat dark
+    sources into a browseable folder and outputs a summary montage plot.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkSources:
+    class: lsst.transient.finder.find_dark_sources.FindDarkSourcesTask
+  consolidateDarkSourceCatalog:
+    class: lsst.transient.finder.consolidate_dark_source_catalogs.ConsolidateDarkSourceCatalogTask
+  exportRoundestDarkSources:
+    class: lsst.transient.finder.export_roundest_dark_sources.ExportRoundestDarkSourcesTask

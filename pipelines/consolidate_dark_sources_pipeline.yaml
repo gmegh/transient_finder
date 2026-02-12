@@ -1,0 +1,7 @@
+description: |
+    Pipeline that consolidates per-detector dark-source catalogs into a
+    single per-exposure catalog.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  consolidateDarkSourceCatalog:
+    class: lsst.transient.finder.consolidate_dark_source_catalogs.ConsolidateDarkSourceCatalogTask
