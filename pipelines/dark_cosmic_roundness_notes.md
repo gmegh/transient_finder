@@ -8,6 +8,15 @@ Your stack failed to read Butler `Plot` storage-class outputs via
 1. saves PNG cutouts directly to disk, and
 2. writes a Butler `ArrowAstropy` manifest table listing those PNG paths.
 
+
+## Synthetic PSF in detection
+
+`FindDarkSourcesTask` now builds a synthetic Gaussian PSF internally:
+
+`SingleGaussianPsf(psfSize, psfSize, psfFwhm / (2*sqrt(2*ln(2))))`
+
+Set `psfFwhm: 9.0` in the pipeline config (and tune as needed).
+
 ## Browseable cutout folder
 
 `artifacts/round_fat_dark_cutouts/<instrument>/exposure_<exposure>/detector_<detector>/`
@@ -27,7 +36,7 @@ cat = butler.get(
     detector=42,
 )
 
-# Per-detector round+fat subset used for exports
+# Per-detector subset used for exports (all detections by default)
 round_fat_cat = butler.get(
     "detector_round_fat_dark_source_catalog",
     instrument="LSSTCam",

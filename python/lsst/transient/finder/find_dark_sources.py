@@ -23,6 +23,8 @@ from __future__ import annotations
 
 __all__ = ["FindDarkSourcesTaskConnections", "FindDarkSourcesTaskConfig", "FindDarkSourcesTask"]
 
+import math
+
 import numpy as np
 
 import lsst.afw.table as afwTable
@@ -30,9 +32,8 @@ import lsst.meas.base as measBase
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 import lsst.pipe.base.connectionTypes as cT
-from lsst.afw.detection import Psf
 from lsst.afw.image import Exposure
-from lsst.meas.algorithms import SourceDetectionTask, SubtractBackgroundTask
+from lsst.meas.algorithms import SingleGaussianPsf, SourceDetectionTask, SubtractBackgroundTask
 
 
 class FindDarkSourcesTaskConnections(
@@ -46,12 +47,6 @@ class FindDarkSourcesTaskConnections(
         dimensions=("instrument", "exposure", "detector"),
     )
 
-    inputPsf = cT.Input(
-        name="input_psf_exposure",
-        doc="Input PSF exposure.",
-        storageClass="Psf",
-        dimensions=("instrument",),
-    )
 
     sourcesCatalog = cT.Output(
         name="detector_dark_source_catalog",
@@ -75,6 +70,19 @@ class FindDarkSourcesTaskConfig(
         doc="Task for background subtraction.",
     )
 
+
+    psfSize = pexConfig.Field(
+        dtype=int,
+        default=21,
+        doc="Width/height of the synthetic Gaussian PSF image in pixels.",
+    )
+
+    psfFwhm = pexConfig.Field(
+        dtype=float,
+        default=9.0,
+        doc="Synthetic Gaussian PSF FWHM in pixels.",
+    )
+
     minRoundness = pexConfig.Field(
         dtype=float,
         default=0.0,
@@ -91,6 +99,7 @@ class FindDarkSourcesTaskConfig(
         super().setDefaults()
         self.sourceDetectionTask.doTempLocalBackground = False
         self.sourceDetectionTask.doTempWideBackground = False
+        self.sourceDetectionTask.thresholdValue = 2.5
 
 
 class FindDarkSourcesTask(pipeBase.PipelineTask):
@@ -166,15 +175,15 @@ class FindDarkSourcesTask(pipeBase.PipelineTask):
         inputs = butlerQC.get(inputRefs)
         outputs = self.run(
             inputExp=inputs["inputExp"],
-            inputPsf=inputs["inputPsf"],
             exposure=inputRefs.inputExp.dataId["exposure"],
             detector=inputRefs.inputExp.dataId["detector"],
         )
         butlerQC.put(outputs, outputRefs)
 
-    def run(self, inputExp: Exposure, inputPsf: Psf, exposure: int, detector: int) -> pipeBase.Struct:
+    def run(self, inputExp: Exposure, exposure: int, detector: int) -> pipeBase.Struct:
         background = self.subtractBackgroundTask.run(exposure=inputExp)
-        inputExp.setPsf(inputPsf)
+        sigma = self.config.psfFwhm / (2.0 * math.sqrt(2.0 * math.log(2.0)))
+        inputExp.setPsf(SingleGaussianPsf(self.config.psfSize, self.config.psfSize, sigma))
 
         id_generator = measBase.IdGenerator()
         table = afwTable.SourceTable.make(self.schema, id_generator.make_table_id_factory())

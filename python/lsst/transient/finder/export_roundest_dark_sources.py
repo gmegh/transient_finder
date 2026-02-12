@@ -56,8 +56,8 @@ class ExportRoundestDarkSourcesConfig(
     pipelineConnections=ExportRoundestDarkSourcesConnections,
 ):
     nSources = pexConfig.Field(dtype=int, default=15, doc="Maximum number of cutouts to export.")
-    minRoundness = pexConfig.Field(dtype=float, default=0.85, doc="Minimum roundness threshold.")
-    minDiameterPixels = pexConfig.Field(dtype=float, default=6.0, doc="Minimum equivalent diameter threshold.")
+    minRoundness = pexConfig.Field(dtype=float, default=0.0, doc="Minimum roundness threshold.")
+    minDiameterPixels = pexConfig.Field(dtype=float, default=0.0, doc="Minimum equivalent diameter threshold.")
     padPixels = pexConfig.Field(dtype=int, default=2, doc="Padding around each source cutout.")
     outputDirectory = pexConfig.Field(
         dtype=str,
