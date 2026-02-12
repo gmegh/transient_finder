@@ -1,0 +1,6 @@
+description: |
+    Wavelet-only detector dark processing.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkRingsWavelet:
+    class: lsst.transient.finder.find_dark_rings_wavelet.FindDarkRingsWaveletTask
