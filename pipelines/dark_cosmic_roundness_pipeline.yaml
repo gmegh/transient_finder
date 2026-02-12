@@ -1,0 +1,18 @@
+description: |
+    Wavelet-based dark ring candidate pipeline.
+    For each detector dark exposure, compute starlet coefficients,
+    detect negative footprints, and export all/roundest cutouts + stats plots.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkRingsWavelet:
+    class: lsst.transient.finder.find_dark_rings_wavelet.FindDarkRingsWaveletTask
+    config:
+      scales: 3
+      coefficientPlane: 2
+      negativeThreshold: -3.0
+      minFootprintArea: 30
+      maxFootprintArea: 1000
+      circularityThreshold: 0.9
+      nRoundest: 40
+      maxAllCutouts: 300
+      outputRoot: "artifacts/dark_ring_wavelet"
