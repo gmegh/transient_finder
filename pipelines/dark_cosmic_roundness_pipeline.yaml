@@ -1,0 +1,22 @@
+description: |
+    End-to-end dark-cosmic pipeline: detect per-detector dark sources with
+    a synthetic Gaussian PSF, export a small detector-level set of cutouts,
+    and (optionally) consolidate catalogs per exposure.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  findDarkSources:
+    class: lsst.transient.finder.find_dark_sources.FindDarkSourcesTask
+    config:
+      psfSize: 21
+      psfFwhm: 9.0
+      minRoundness: 0.0
+      minDiameterPixels: 0.0
+  exportRoundestDarkSources:
+    class: lsst.transient.finder.export_roundest_dark_sources.ExportRoundestDarkSourcesTask
+    config:
+      minRoundness: 0.0
+      minDiameterPixels: 0.0
+      nSources: 15
+      outputDirectory: "artifacts/round_fat_dark_cutouts"
+  consolidateDarkSourceCatalog:
+    class: lsst.transient.finder.consolidate_dark_source_catalogs.ConsolidateDarkSourceCatalogTask
