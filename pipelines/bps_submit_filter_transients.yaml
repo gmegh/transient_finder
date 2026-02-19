@@ -1,7 +1,7 @@
 computeSite: s3df
 pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/filter_transients_pipeline.yaml
 payload:
-  butlerConfig: "/repo/main"
+  butlerConfig: "main"
   payloadName: "detector_transient_catalogs"
   inCollection: "LSSTCam/defaults,lsstcam_subtract_pairs"
   dataQuery: "detector not in (191, 192, 195, 196, 199, 200, 203, 204)"
