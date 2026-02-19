@@ -1,7 +1,7 @@
 computeSite: s3df
 pipelineYaml: /sdf/group/rubin/repo/aos_imsim/brycek/LSSTCam_work/subtract_project/detect_aos_acqs_pipeline.yaml#step1c-detect-and-measure
 payload:
-  butlerConfig: "/repo/main"
+  butlerConfig: "main"
   payloadName: "lsstcam_subtract_pairs_singleFrameDetect"
   inCollection: "LSSTCam/defaults,lsstcam_subtract_pairs"
 extraQgraphOptions: "--data-id-table /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/closed_loop_pairs_all_with_restrictions.ecsv --rebase"
