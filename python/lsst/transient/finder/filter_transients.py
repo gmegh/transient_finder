@@ -65,6 +65,9 @@ bad_flags = [
     "base_PixelFlags_flag_crCenterAll",
     "base_PixelFlags_flag_badCenterAll",
     "base_PixelFlags_flag_suspectCenterAll",
+    "centroid_flag",
+    "sky_source",
+    "ap12Flux_flag",
 ]
 
 FORBIDDEN_MASK_PLANES = {
@@ -267,97 +270,79 @@ class FilterTransientsTask(pipeBase.PipelineTask):
                 "psfFlux": transient_catalog_per_detector["psfFlux"],
                 "sky": transient_catalog_per_detector["sky"],
                 "extendedness": transient_catalog_per_detector["extendedness"],
-                "forced_psfFlux_first_visit": first_forced_photometry["base_PsfFlux_instFlux"].data * u.nJy,
-                "forced_psfFlux_second_visit": second_forced_photometry["base_PsfFlux_instFlux"].data * u.nJy,
+                "ixx": transient_catalog_per_detector["ixx"],
+                "iyy": transient_catalog_per_detector["iyy"],
+                "ixy": transient_catalog_per_detector["ixy"],
+                # instrument fluxes
+                "ap12_instFlux": transient_catalog_per_detector["ap12_instFlux"],
+                "ap17_instFlux": transient_catalog_per_detector["ap17_instFlux"],
+                "ap35_instFlux": transient_catalog_per_detector["ap35_instFlux"],
+                "ap50_instFlux": transient_catalog_per_detector["ap50_instFlux"],
+                "tophat_instFlux": transient_catalog_per_detector["tophat_instFlux"],
+                "localBackground_instFlux": transient_catalog_per_detector["localBackground_instFlux"],
+                # forced photometry fluxes
+                # in electrons because I ran it on preliminary_visit_image
+                "forced_psfFlux_first_visit": first_forced_photometry["base_PsfFlux_instFlux"].data
+                * u.electron,
+                "forced_psfFlux_second_visit": second_forced_photometry["base_PsfFlux_instFlux"].data
+                * u.electron,
                 "forced_ap03Flux_first_visit": first_forced_photometry[
                     "base_CircularApertureFlux_3_0_instFlux"
                 ].data
-                * u.nJy,
+                * u.electron,
                 "forced_ap03Flux_second_visit": second_forced_photometry[
                     "base_CircularApertureFlux_3_0_instFlux"
                 ].data
-                * u.nJy,
+                * u.electron,
                 "forced_psfFlux_diff": sign
                 * (
                     first_forced_photometry["base_PsfFlux_instFlux"].data
                     - second_forced_photometry["base_PsfFlux_instFlux"].data
                 )
-                * u.nJy,
+                * u.electron,
                 "forced_ap03Flux_diff": sign
                 * (
                     first_forced_photometry["base_CircularApertureFlux_3_0_instFlux"].data
                     - second_forced_photometry["base_CircularApertureFlux_3_0_instFlux"].data
                 )
-                * u.nJy,
+                * u.electron,
                 "forced_ap06Flux_diff": sign
                 * (
                     first_forced_photometry["base_CircularApertureFlux_6_0_instFlux"].data
                     - second_forced_photometry["base_CircularApertureFlux_6_0_instFlux"].data
                 )
-                * u.nJy,
+                * u.electron,
                 "forced_ap09Flux_diff": sign
                 * (
                     first_forced_photometry["base_CircularApertureFlux_9_0_instFlux"].data
                     - second_forced_photometry["base_CircularApertureFlux_9_0_instFlux"].data
                 )
-                * u.nJy,
+                * u.electron,
                 "forced_ap12Flux_diff": sign
                 * (
                     first_forced_photometry["base_CircularApertureFlux_12_0_instFlux"].data
                     - second_forced_photometry["base_CircularApertureFlux_12_0_instFlux"].data
                 )
-                * u.nJy,
+                * u.electron,
                 "forced_ap17Flux_diff": sign
                 * (
                     first_forced_photometry["base_CircularApertureFlux_17_0_instFlux"].data
                     - second_forced_photometry["base_CircularApertureFlux_17_0_instFlux"].data
                 )
-                * u.nJy,
+                * u.electron,
             }
         )
-        forced_unmatched_table["psfFlux_min"] = (
-            np.minimum(
-                forced_unmatched_table["forced_psfFlux_diff"].to(u.nJy).value,
-                forced_unmatched_table["psfFlux"].to(u.nJy).value,
-            )
-            * u.nJy
-        )
-
-        forced_unmatched_table["ap03Flux_min"] = (
-            np.minimum(
-                forced_unmatched_table["forced_ap03Flux_diff"].to(u.nJy).value,
-                forced_unmatched_table["ap03Flux"].to(u.nJy).value,
-            )
-            * u.nJy
-        )
-
-        forced_unmatched_table["ap06Flux_min"] = (
-            np.minimum(
-                forced_unmatched_table["forced_ap06Flux_diff"].to(u.nJy).value,
-                forced_unmatched_table["ap06Flux"].to(u.nJy).value,
-            )
-            * u.nJy
-        )
-
-        forced_unmatched_table["ap09Flux_min"] = (
-            np.minimum(
-                forced_unmatched_table["forced_ap09Flux_diff"].to(u.nJy).value,
-                forced_unmatched_table["ap09Flux"].to(u.nJy).value,
-            )
-            * u.nJy
-        )
-
         forced_unmatched_table["ap12Flux_min"] = (
             np.minimum(
-                forced_unmatched_table["forced_ap12Flux_diff"].to(u.nJy).value,
-                forced_unmatched_table["ap12Flux"].to(u.nJy).value,
+                forced_unmatched_table["forced_ap12Flux_diff"].to(u.electron).value,
+                forced_unmatched_table["ap12_instFlux"].to(u.electron).value,
             )
-            * u.nJy
+            * u.electron
         )
-
+        # TO-DO this is incorrect can't do diff of electron to nJy
         forced_unmatched_table["ap17Flux_min"] = (
             np.minimum(
-                forced_unmatched_table["forced_ap17Flux_diff"].to(u.nJy).value,
+                forced_unmatched_table["forced_ap17Flux_diff"].to(u.electron).value,
                 forced_unmatched_table["ap17Flux"].to(u.nJy).value,
             )
             * u.nJy
