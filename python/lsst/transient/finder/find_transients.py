@@ -209,6 +209,8 @@ class FindTransientsTask(pipeBase.PipelineTask):
             "pixelFlags_suspect",
             "pixelFlags_suspectCenter",
             "deblend_skipped",
+            "centroid_flag",
+            "invalidPsfFlag",
         ]
 
         def build_good_mask(cat: Table) -> np.ndarray:
@@ -255,28 +257,88 @@ class FindTransientsTask(pipeBase.PipelineTask):
 
         day_obs_first = first_visit // 10**4
         day_obs_second = second_visit // 10**4
+
+        # --- units ---
+        flux_unit = u.nJy  # or whatever you're using for calibFlux
+        inst_flux_unit = u.electron
+
+        # --- instrumental fluxes (arrays) ---
+        # visit 1
+        ap12_1 = matched1["apFlux_12_0_instFlux"]
+        ap17_1 = matched1["apFlux_17_0_instFlux"]
+        ap35_1 = matched1["apFlux_35_0_instFlux"]
+        ap50_1 = matched1["apFlux_50_0_instFlux"]
+        tophat_1 = matched1["normCompTophatFlux_instFlux"]
+        bkg_1 = matched1["localBackground_instFlux"]
+
+        # visit 2
+        ap12_2 = matched2["apFlux_12_0_instFlux"]
+        ap17_2 = matched2["apFlux_17_0_instFlux"]
+        ap35_2 = matched2["apFlux_35_0_instFlux"]
+        ap50_2 = matched2["apFlux_50_0_instFlux"]
+        tophat_2 = matched2["normCompTophatFlux_instFlux"]
+        bkg_2 = matched2["localBackground_instFlux"]
+
+        # differences (2 - 1)
+        dap12 = ap12_2 - ap12_1
+        dap17 = ap17_2 - ap17_1
+        dap35 = ap35_2 - ap35_1
+        dap50 = ap50_2 - ap50_1
+        dtophat = tophat_2 - tophat_1
+        dbkg = bkg_2 - bkg_1
+
         matched_table = Table(
             {
+                # visits / ids
                 "first_visit": np.full(len(matched1), first_visit, dtype="int64"),
                 "second_visit": np.full(len(matched1), second_visit, dtype="int64"),
                 "day_obs": np.full(len(matched1), day_obs_first, dtype="int64"),
                 "first_src_id": matched1["sourceId"],
                 "second_src_id": matched2["sourceId"],
+                # positions (use coord_* as you had)
                 "ra": matched1["coord_ra"] * u.deg,
                 "dec": matched1["coord_dec"] * u.deg,
                 "x": matched1["x"],
                 "y": matched1["y"],
                 "detector": matched1["detector"],
                 "band": matched1["band"],
+                # shape moments (pixels^2)
+                "ixx": matched1["ixx"] * u.pixel**2,
+                "iyy": matched1["iyy"] * u.pixel**2,
+                "ixy": matched1["ixy"] * u.pixel**2,
+                # calibrated flux differences
                 "flux_diff12": flux_diff12 * flux_unit,
                 "flux_diff09": flux_diff09 * flux_unit,
                 "flux_diff06": flux_diff06 * flux_unit,
                 "flux_diffpsf": flux_diffpsf * flux_unit,
+                # instrumental fluxes: visit 1
+                "ap12_instFlux_1": ap12_1 * inst_flux_unit,
+                "ap17_instFlux_1": ap17_1 * inst_flux_unit,
+                "ap35_instFlux_1": ap35_1 * inst_flux_unit,
+                "ap50_instFlux_1": ap50_1 * inst_flux_unit,
+                "tophat_instFlux_1": tophat_1 * inst_flux_unit,
+                "localBackground_instFlux_1": bkg_1 * inst_flux_unit,
+                # instrumental fluxes: visit 2
+                "ap12_instFlux_2": ap12_2 * inst_flux_unit,
+                "ap17_instFlux_2": ap17_2 * inst_flux_unit,
+                "ap35_instFlux_2": ap35_2 * inst_flux_unit,
+                "ap50_instFlux_2": ap50_2 * inst_flux_unit,
+                "tophat_instFlux_2": tophat_2 * inst_flux_unit,
+                "localBackground_instFlux_2": bkg_2 * inst_flux_unit,
+                # instrumental flux differences (2 - 1)
+                "ap12_instFlux_diff": dap12 * inst_flux_unit,
+                "ap17_instFlux_diff": dap17 * inst_flux_unit,
+                "ap35_instFlux_diff": dap35 * inst_flux_unit,
+                "ap50_instFlux_diff": dap50 * inst_flux_unit,
+                "tophat_instFlux_diff": dtophat * inst_flux_unit,
+                "localBackground_instFlux_diff": dbkg * inst_flux_unit,
+                # morphology classifier
                 "extendedness": extendedness,
             }
         )
         self.log.info("Matched table constructed")
 
+        # ---------- first_unmatched_table (previous visit) ----------
         first_unmatched_table = Table(
             {
                 "visit": np.full(len(unmatched_prev), first_visit, dtype="int64"),
@@ -289,12 +351,25 @@ class FindTransientsTask(pipeBase.PipelineTask):
                 "y": unmatched_prev["y"],
                 "detector": unmatched_prev["detector"],
                 "band": unmatched_prev["band"],
-                "ap03Flux": unmatched_prev["ap03Flux"] * u.nJy,
-                "ap06Flux": unmatched_prev["ap06Flux"] * u.nJy,
-                "ap09Flux": unmatched_prev["ap09Flux"] * u.nJy,
-                "ap12Flux": unmatched_prev["ap12Flux"] * u.nJy,
-                "ap17Flux": unmatched_prev["ap17Flux"] * u.nJy,
-                "psfFlux": unmatched_prev["psfFlux"] * u.nJy,
+                # shape moments
+                "ixx": unmatched_prev["ixx"] * u.pixel**2,
+                "iyy": unmatched_prev["iyy"] * u.pixel**2,
+                "ixy": unmatched_prev["ixy"] * u.pixel**2,
+                # calibrated fluxes
+                "ap03Flux": unmatched_prev["ap03Flux"] * flux_unit,
+                "ap06Flux": unmatched_prev["ap06Flux"] * flux_unit,
+                "ap09Flux": unmatched_prev["ap09Flux"] * flux_unit,
+                "ap12Flux": unmatched_prev["ap12Flux"] * flux_unit,
+                "ap17Flux": unmatched_prev["ap17Flux"] * flux_unit,
+                "psfFlux": unmatched_prev["psfFlux"] * flux_unit,
+                # instrumental fluxes (electrons)
+                "ap12_instFlux": unmatched_prev["apFlux_12_0_instFlux"] * inst_flux_unit,
+                "ap17_instFlux": unmatched_prev["apFlux_17_0_instFlux"] * inst_flux_unit,
+                "ap35_instFlux": unmatched_prev["apFlux_35_0_instFlux"] * inst_flux_unit,
+                "ap50_instFlux": unmatched_prev["apFlux_50_0_instFlux"] * inst_flux_unit,
+                "tophat_instFlux": unmatched_prev["normCompTophatFlux_instFlux"] * inst_flux_unit,
+                "localBackground_instFlux": unmatched_prev["localBackground_instFlux"] * inst_flux_unit,
+                # background / morphology
                 "sky": unmatched_prev["sky"],
                 "extendedness": unmatched_prev["sizeExtendedness"],
             }
@@ -313,12 +388,25 @@ class FindTransientsTask(pipeBase.PipelineTask):
                 "y": unmatched_curr["y"],
                 "detector": unmatched_curr["detector"],
                 "band": unmatched_curr["band"],
-                "ap03Flux": unmatched_curr["ap03Flux"] * u.nJy,
-                "ap06Flux": unmatched_curr["ap06Flux"] * u.nJy,
-                "ap09Flux": unmatched_curr["ap09Flux"] * u.nJy,
-                "ap12Flux": unmatched_curr["ap12Flux"] * u.nJy,
-                "ap17Flux": unmatched_curr["ap17Flux"] * u.nJy,
-                "psfFlux": unmatched_curr["psfFlux"] * u.nJy,
+                # shape moments
+                "ixx": unmatched_curr["ixx"] * u.pixel**2,
+                "iyy": unmatched_curr["iyy"] * u.pixel**2,
+                "ixy": unmatched_curr["ixy"] * u.pixel**2,
+                # calibrated fluxes
+                "ap03Flux": unmatched_curr["ap03Flux"] * flux_unit,
+                "ap06Flux": unmatched_curr["ap06Flux"] * flux_unit,
+                "ap09Flux": unmatched_curr["ap09Flux"] * flux_unit,
+                "ap12Flux": unmatched_curr["ap12Flux"] * flux_unit,
+                "ap17Flux": unmatched_curr["ap17Flux"] * flux_unit,
+                "psfFlux": unmatched_curr["psfFlux"] * flux_unit,
+                # instrumental fluxes (electrons)
+                "ap12_instFlux": unmatched_curr["apFlux_12_0_instFlux"] * inst_flux_unit,
+                "ap17_instFlux": unmatched_curr["apFlux_17_0_instFlux"] * inst_flux_unit,
+                "ap35_instFlux": unmatched_curr["apFlux_35_0_instFlux"] * inst_flux_unit,
+                "ap50_instFlux": unmatched_curr["apFlux_50_0_instFlux"] * inst_flux_unit,
+                "tophat_instFlux": unmatched_curr["normCompTophatFlux_instFlux"] * inst_flux_unit,
+                "localBackground_instFlux": unmatched_curr["localBackground_instFlux"] * inst_flux_unit,
+                # background / morphology
                 "sky": unmatched_curr["sky"],
                 "extendedness": unmatched_curr["sizeExtendedness"],
             }
