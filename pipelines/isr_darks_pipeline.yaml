@@ -1,6 +1,20 @@
 description: |
     Pipeline that runs ISR on darks.
 instrument: lsst.obs.lsst.LsstCam
+imports:
+  - location: $DRP_PIPE_DIR/pipelines/_ingredients/base-v2.yaml
+    include:
+      - isr
+      # We do not include calibrateImage in order to reset its configuration
+      # to the task defaults, which essentially correspond to AP's more
+      # performance-oriented setup.  We then override a few connections to
+      # restore compatibility with the DRP configurations of other tasks.
+      - consolidateVisitSummary
+      - makeInitialVisitDetectorTable
+      - makeInitialVisitTable
+      - standardizeSingleVisitStar
+      - consolidateSingleVisitStar
+      - calibrateImage
 tasks:
   cpDarkIsr:
     class: lsst.ip.isr.IsrTaskLSST
@@ -19,4 +33,61 @@ tasks:
         config.doBias = True
         # Defects are flagged but not interpolated for CR detection.
         config.doDefect = True
+  cpDark:
+    class: lsst.cp.pipe.CpDarkTask
+    config:
+      connections.inputExp: 'post_isr_dark'
+      connections.outputExp: 'post_isr_dark_CR_removed'
+  addDarkToImage:
+    class: lsst.transient.finder.add_dark_to_image.AddDarkToImageTask
+  calibrateImage:
+    class: lsst.pipe.tasks.calibrateImage.CalibrateImageTask
+    config:
+      file: $DRP_PIPE_DIR/config/calibrateImage.py
+      connections.exposures: post_isr_dark_image
+      connections.stars_footprints: single_visit_star_footprints
+      connections.psf_stars_footprints: single_visit_psf_star_footprints
+      connections.psf_stars: single_visit_psf_star
+      connections.initial_stars_schema: single_visit_star_schema
+      connections.stars: single_visit_star_unstandardized
+      connections.exposure: preliminary_visit_image
+      connections.mask: preliminary_visit_mask
+      connections.background: preliminary_visit_image_background
+      id_generator.release_id: parameters.release_id
+  singleFrameDetectAndMeasure:
+    class: lsst.drp.tasks.single_frame_detect_and_measure.SingleFrameDetectAndMeasureTask
+    config:
+      connections.exposure: preliminary_visit_image
+      connections.input_background: preliminary_visit_image_background
+      connections.sources: single_visit_star_reprocessed_unstandardized
+      connections.sources_footprints: single_visit_star_reprocessed_footprints
+      connections.background: preliminary_visit_image_reprocessed_background
+  standardizeReprocessedSingleVisitStar:
+    class: lsst.pipe.tasks.postprocess.TransformSourceTableTask
+    config:
+      connections.inputCatalog: single_visit_star_reprocessed_unstandardized
+      connections.outputCatalog: single_visit_star_reprocessed_detector
+      functorFile: /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/Source.yaml
+  consolidateReprocessedSingleVisitStar:
+    class: lsst.pipe.tasks.postprocess.ConsolidateSourceTableTask
+    config:
+      connections.inputCatalogs: single_visit_star_reprocessed_detector
+      connections.outputCatalog: single_visit_star_reprocessed
+subsets:
+  step0:
+    subset:
+      - cpDarkIsr
+  stepb0:
+    subset:
+      - cpDark
+  step1:
+    subset:
+      - addDarkToImage
+  step2:
+    subset:
+      - calibrateImage
+      - standardizeSingleVisitStar
+      - singleFrameDetectAndMeasure
+      - standardizeReprocessedSingleVisitStar
+      - consolidateReprocessedSingleVisitStar
   

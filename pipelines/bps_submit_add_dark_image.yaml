@@ -1,0 +1,7 @@
+computeSite: s3df
+pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/isr_darks_pipeline.yaml#step1
+payload:
+  butlerConfig: "/repo/main"
+  payloadName: "post_isr_dark_and_images"
+  inCollection: "LSSTCam/defaults,u/gmegias/post_isr_darks,u/gmegias/darks_input_exposure"
+extraQgraphOptions: "--data-id-table /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/darks_consdb_one.ecsv"
