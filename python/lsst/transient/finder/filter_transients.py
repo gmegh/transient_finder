@@ -65,9 +65,6 @@ bad_flags = [
     "base_PixelFlags_flag_crCenterAll",
     "base_PixelFlags_flag_badCenterAll",
     "base_PixelFlags_flag_suspectCenterAll",
-    "centroid_flag",
-    "sky_source",
-    "ap12Flux_flag",
 ]
 
 FORBIDDEN_MASK_PLANES = {
