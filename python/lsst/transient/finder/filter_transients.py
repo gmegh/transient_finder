@@ -169,9 +169,6 @@ class FilterTransientsTask(pipeBase.PipelineTask):
 
         self.makeSubtask("forcedPhotometryTask")
 
-    def detectors_missing_wcs(self, det_table: Table) -> set[int]:
-        return {rec["id"] for rec in det_table if rec.wcs is None}
-
     def runQuantum(
         self,
         butlerQC: pipeBase.QuantumContext,
