@@ -3,5 +3,5 @@ pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/isr_darks_pipel
 payload:
   butlerConfig: "main"
   payloadName: "post_isr_dark_CR_removed"
-  inCollection: "LSSTCam/defaults,u/gmegias/post_isr_darks"
-extraQgraphOptions: "--data-id-table /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/darks_consdb_v1.ecsv"
+  inCollection: "u/gmegias/post_isr_dark_CR_removed"
+extraQgraphOptions: "--data-id-table /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/darks_CRs_consdb_missing.ecsv"
