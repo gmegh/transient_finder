@@ -1,0 +1,7 @@
+description: |
+    Pipeline that runs ISR on darks.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  FinalConsolidateDarkSourcesTask:
+    class: lsst.transient.finder.final_consolidate_dark_sources.FinalConsolidateDarkSourcesTask
+  
