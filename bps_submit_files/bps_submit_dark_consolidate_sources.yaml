@@ -1,0 +1,6 @@
+computeSite: s3df
+pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/final_consolidate_dark_sources_pipeline.yaml
+payload:
+  butlerConfig: "main"
+  payloadName: "dark_sources_final"
+  inCollection: "u/gmegias/dark_sources"
