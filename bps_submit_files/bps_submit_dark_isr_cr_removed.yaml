@@ -1,7 +1,6 @@
 computeSite: s3df
 pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/isr_darks_pipeline.yaml#stepb0
 payload:
-  butlerConfig: "main"
-  payloadName: "post_isr_dark_CR_removed"
-  inCollection: "u/gmegias/post_isr_dark_CR_removed"
-extraQgraphOptions: "--data-id-table /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/darks_CRs_consdb_missing.ecsv"
+  butlerConfig: "ir2"
+  payloadName: "post_isr_darks_CR_removed"
+  inCollection: "LSSTCam/defaults,u/lsstccs/ptc_13558_w_2023_41,u/gmegias/post_isr_darks"

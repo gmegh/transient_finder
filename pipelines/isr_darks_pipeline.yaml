@@ -33,6 +33,23 @@ tasks:
         config.doBias = True
         # Defects are flagged but not interpolated for CR detection.
         config.doDefect = True
+  cpDarkSlacIsr:
+    class: lsst.ip.isr.IsrTaskLSST
+    config:
+      connections.ccdExposure: "raw"
+      connections.outputExposure: "post_isr_dark"
+      python: |
+        from lsst.cp.pipe import configureIsrTaskLSSTForCalibrations
+
+        configureIsrTaskLSSTForCalibrations(config)
+
+        config.doCrosstalk = True
+        config.crosstalk.doQuadraticCrosstalkCorrection = True
+        config.doApplyGains = True
+        config.doLinearize = False
+        config.doBias = True
+        # Defects are flagged but not interpolated for CR detection.
+        config.doDefect = True
   cpDark:
     class: lsst.cp.pipe.CpDarkTask
     config:
@@ -77,6 +94,9 @@ subsets:
   step0:
     subset:
       - cpDarkIsr
+  stepa0:
+    subset:
+      - cpDarkSlacIsr
   stepb0:
     subset:
       - cpDark

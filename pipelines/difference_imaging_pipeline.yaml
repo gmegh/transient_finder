@@ -1,0 +1,7 @@
+description: |
+    Pipeline that runs difference imaging.
+instrument: lsst.obs.lsst.LsstCam
+tasks:
+  differenceImaging:
+    class: lsst.transient.finder.difference_imaging.DifferenceImagingTask
+  

@@ -1,7 +1,7 @@
 computeSite: s3df
-pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/isr_darks_pipeline.yaml#step0
+pipelineYaml: /sdf/home/g/gmegias/aos/transient_finder/pipelines/isr_darks_pipeline.yaml#stepa0
 payload:
-  butlerConfig: "main"
+  butlerConfig: "ir2"
   payloadName: "post_isr_darks"
-  inCollection: "u/gmegias/post_isr_darks"
-extraQgraphOptions: "--data-id-table /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/darks_consdb_missing.ecsv"
+  inCollection: "LSSTCam/defaults,u/lsstccs/ptc_13558_w_2023_41"
+extraQgraphOptions: "--data-id-table /sdf/home/b/brycek/aos_repo/brycek/LSSTCam_work/subtract_project/darks_exposure_lists/darks_slac.ecsv"
